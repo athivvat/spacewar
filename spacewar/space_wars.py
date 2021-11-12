@@ -570,14 +570,6 @@ def publish_online_score(score, name, game_over):
 
 def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, user_type):
     global online_user_type
-    print('='*31)
-    print('='*10, 'Game Over', '='*10)
-    print('User Type (Offline):', user_type)
-    print('User Type (Online):', online_user_type)
-    print('Coin:', coin_count)
-    print('Score:', score)
-    print('High Score:', high_score)
-    print('='*31)
     # Move enemies below screen (is there a better way?)
     for i in range(num_of_enemies):
         enemy[i].posY = screen_sizeY + 100
