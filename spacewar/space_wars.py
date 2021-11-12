@@ -69,7 +69,6 @@ def connection():
 def subscription(topic, message):
     import ast
     global score_list, online_user_type
-
     try:
         if topic == f"/{appid}{user_score_topic}" and message:
             score = json.loads(ast.literal_eval(message).decode('utf-8'))
@@ -77,8 +76,7 @@ def subscription(topic, message):
         elif topic == f"/{appid}{user_pred_topic}" and message:
             msg_pred = json.loads(ast.literal_eval(message).decode('utf-8'))
             if msg_pred['user'] == username:
-                online_user_type = msg_pred['user_type']
-                print(msg_pred)
+                online_user_type = msg_pred['type']
     except Exception:
         pass
     logging.info(topic + " " + message)
@@ -532,12 +530,13 @@ def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_ov
     if user_type:
         user_type_text = score_font.render(
             "You are : " + str(user_type), True, (255, 255, 0))
+
     if online_user_type:
         online_user_type_text = score_font.render(
-            "You are (online): " + str(online_user_type), True, (255, 255, 0))
+            "You are (online): " + str(online_user_type), True, (0, 255, 255))
     else:
         online_user_type_text = score_font.render(
-            "You are (online): ", True, (255, 255, 0))
+            "You are (online): ", True, (0, 255, 255))
 
     y_pos = y
     screen.blit(level_text, (x, y_pos))
@@ -552,9 +551,9 @@ def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_ov
         y_pos = y_pos + 5 + font_size
         screen.blit(user_type_text, (x, y_pos))
 
-    # display online_user_type
-    y_pos = y_pos + 5 + font_size
-    screen.blit(online_user_type_text, (x, y_pos))
+    if online_user_type and not game_over:
+        y_pos = y_pos + 5 + font_size
+        screen.blit(online_user_type_text, (x, y_pos))
 
     publish_online_score(score, name, game_over)
 
@@ -590,14 +589,16 @@ def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, us
         screen_sizeX/2), int(screen_sizeY * 3/10))
     message_display_center(user_type, font_medium, yellow, int(
         screen_sizeX/2), int(screen_sizeY * 4/10))
+    message_display_center(online_user_type, font_medium, (0, 255, 255), int(
+        screen_sizeX/2), int(screen_sizeY * 5/10))
     message_display_center('Score: ' + str(score), font_medium,
-                           yellow, int(screen_sizeX/2), int(screen_sizeY * 5/10))
-    message_display_center('Coins: ' + str(coin_count), font_medium,
                            yellow, int(screen_sizeX/2), int(screen_sizeY * 6/10))
-    message_display_center('Highscore: ' + str(high_score), font_medium,
+    message_display_center('Coins: ' + str(coin_count), font_medium,
                            yellow, int(screen_sizeX/2), int(screen_sizeY * 7/10))
+    message_display_center('Highscore: ' + str(high_score), font_medium,
+                           yellow, int(screen_sizeX/2), int(screen_sizeY * 8/10))
     message_display_center('Press any key to continue', font_medium, yellow, int(
-        screen_sizeX/2), int(screen_sizeY * 8/10))
+        screen_sizeX/2), int(screen_sizeY * 9/10))
 
 #############################
 #		Main Program		#
@@ -842,7 +843,6 @@ while not quit_game:
     A10 = 0
     game_avg = pd.DataFrame(
         columns=['A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10'])
-    online_user_type = None
     thread_collect_data()
 
     # --------------------
@@ -900,7 +900,7 @@ while not quit_game:
             if event.type == pygame.KEYDOWN:
 
                 # if Game Over and any key, go to menu
-                if game_over:
+                if game_over and (event.key == pygame.K_ESCAPE or event.key == pygame.K_RETURN):
                     go_to_menu = True
 
                 # 'p' or ESC' for pause
@@ -1042,5 +1042,6 @@ while not quit_game:
         high_scores.high_scores_update_db(db_connection, PLAYER_NAME, score)
 
     save_collection_avg_data(game_avg.mean().to_dict())
+    online_user_type = None
 db_connection.close()
 print('Successfully quit Space Wars!')
