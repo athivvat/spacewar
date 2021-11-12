@@ -35,10 +35,6 @@ import joblib
 import pandas as pd
 import pickle
 
-from river import stream
-from river import cluster
-from river import metrics
-from river import preprocessing
 #import space_wars_settings as sws
 
 # ------------------
@@ -50,6 +46,7 @@ import logging
 import time
 
 score_list = []
+online_user_type = None
 publish_time = datetime.now()
 publish_time_data = datetime.now()
 
@@ -71,12 +68,17 @@ def connection():
 
 def subscription(topic, message):
     import ast
-    global score_list
+    global score_list, online_user_type
 
     try:
         if topic == f"/{appid}{user_score_topic}" and message:
             score = json.loads(ast.literal_eval(message).decode('utf-8'))
             score_list.append(score)
+        elif topic == f"/{appid}{user_pred_topic}" and message:
+            msg_pred = json.loads(ast.literal_eval(message).decode('utf-8'))
+            if msg_pred['user'] == username:
+                online_user_type = msg_pred['user_type']
+                print(msg_pred)
     except Exception:
         pass
     logging.info(topic + " " + message)
@@ -90,6 +92,7 @@ microgear.on_connect = connection
 microgear.on_message = subscription
 microgear.on_disconnect = disconnect
 microgear.subscribe(user_score_topic)
+microgear.subscribe(user_pred_topic)
 microgear.connect(False)
 
 # Analytic Model
@@ -97,11 +100,6 @@ dt_scaler = joblib.load('./model/scaler.bin')
 decision_tree = joblib.load('./model/model.h5')
 LABELS = {2: 'Hardcore Achiever', 3: 'Hardcore Killer',
           1: 'Casual Achiever', 0: 'Casual Killer'}
-
-# Online Model
-river_scaler = preprocessing.StandardScaler()
-with open('./model/model.pkl', 'rb') as f:
-    online_model = pickle.load(f)
 
 
 def prediction_user_type(level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, is_game_over=False):
@@ -127,32 +125,6 @@ def prediction_user_type(level, keyX_pressed_count, keyY_pressed_count, respawn_
               data['A6'], data['A7'], data['A8'], data['A9'], data['A10']]]
     X_scale = dt_scaler.transform(X)
     y = decision_tree.predict(X_scale)[0]
-    return LABELS.get(y)
-
-
-def prediction_user_type_online_learning(level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, is_game_over=False):
-    global A0, A1
-    a0 = statistics.mean(A0) if len(A0) else 0
-    a1 = statistics.mean(A1) if len(A1) else 0
-    a2 = coin_count
-    a3 = destroyed_enemy_count
-    a4 = shots_count
-    a5 = A4 - A3
-    a6 = level
-    a7 = keyX_pressed_count
-    a8 = keyY_pressed_count
-    a9 = respawn_enemy_count
-    a10 = respawn_coin_count
-
-    X = {'A0': a0, 'A1': a1, 'A2': a2, 'A3': a3, 'A4': a4,
-         'A5': a5, 'A6': a6, '7': a7, 'A8': a8, 'A9': a9, 'A10': a10}
-    # if is_game_over == False:
-    #     data = game_avg.mean().to_dict()
-    #     X = [[data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'],
-    #           data['A6'], data['A7'], data['A8'], data['A9'], data['A10']]]
-
-    X_scale = river_scaler.learn_one(X).transform_one(X)
-    y = online_model.predict_one(X_scale)
     return LABELS.get(y)
 
 
@@ -547,7 +519,8 @@ def show_online_score(font_size=16, x=100, y=10):
         y_pos = y_pos + 5 + font_size
 
 
-def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_over=False, user_type=None, online_user_type=None):
+def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_over=False, user_type=None):
+    global online_user_type
     score_font = pygame.font.Font('freesansbold.ttf', font_size)
     level_text = score_font.render(
         "Level  : " + str(level), True, (255, 255, 0))
@@ -562,6 +535,9 @@ def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_ov
     if online_user_type:
         online_user_type_text = score_font.render(
             "You are (online): " + str(online_user_type), True, (255, 255, 0))
+    else:
+        online_user_type_text = score_font.render(
+            "You are (online): ", True, (255, 255, 0))
 
     y_pos = y
     screen.blit(level_text, (x, y_pos))
@@ -576,9 +552,9 @@ def show_score(score, level, name, coin_count, font_size=16, x=10, y=10, game_ov
         y_pos = y_pos + 5 + font_size
         screen.blit(user_type_text, (x, y_pos))
 
-    if online_user_type:
-        y_pos = y_pos + 5 + font_size
-        screen.blit(online_user_type_text, (x, y_pos))
+    # display online_user_type
+    y_pos = y_pos + 5 + font_size
+    screen.blit(online_user_type_text, (x, y_pos))
 
     publish_online_score(score, name, game_over)
 
@@ -593,7 +569,8 @@ def publish_online_score(score, name, game_over):
         publish_time = now
 
 
-def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, user_type, online_user_type):
+def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, user_type):
+    global online_user_type
     print('='*31)
     print('='*10, 'Game Over', '='*10)
     print('User Type (Offline):', user_type)
@@ -865,6 +842,7 @@ while not quit_game:
     A10 = 0
     game_avg = pd.DataFrame(
         columns=['A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10'])
+    online_user_type = None
     thread_collect_data()
 
     # --------------------
@@ -973,11 +951,8 @@ while not quit_game:
             user_type = prediction_user_type(
                 level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, True)
 
-            online_user_type = prediction_user_type_online_learning(
-                level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, True)
-
             show_game_over(screen_sizeX, screen_sizeY, score,
-                           session_high_score, coin_count, user_type, online_user_type)
+                           session_high_score, coin_count, user_type)
             show_score(score, level, PLAYER_NAME, coin_count, game_over=True)
 
             show_online_score()
@@ -1048,11 +1023,8 @@ while not quit_game:
             user_type = prediction_user_type(
                 level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count)
 
-            online_user_type = prediction_user_type_online_learning(
-                level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, True)
-
             show_score(score, level, PLAYER_NAME,
-                       coin_count, user_type=user_type, online_user_type=online_user_type)
+                       coin_count, user_type=user_type)
             show_online_score()
             save_collection_data(level, keyX_pressed_count,
                                  keyY_pressed_count, respawn_enemy_count, respawn_coin_count)
