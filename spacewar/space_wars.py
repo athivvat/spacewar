@@ -53,6 +53,7 @@ score_list = []
 publish_time = datetime.now()
 publish_time_data = datetime.now()
 
+username = 'Fang'
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
@@ -143,8 +144,8 @@ def prediction_user_type_online_learning(level, keyX_pressed_count, keyY_pressed
     a9 = respawn_enemy_count
     a10 = respawn_coin_count
 
-
-    X = {'A0': a0, 'A1':a1, 'A2':a2, 'A3':a3, 'A4':a4, 'A5':a5, 'A6':a6, '7':a7, 'A8':a8, 'A9':a9, 'A10':a10}
+    X = {'A0': a0, 'A1': a1, 'A2': a2, 'A3': a3, 'A4': a4,
+         'A5': a5, 'A6': a6, '7': a7, 'A8': a8, 'A9': a9, 'A10': a10}
     # if is_game_over == False:
     #     data = game_avg.mean().to_dict()
     #     X = [[data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'],
@@ -595,7 +596,8 @@ def publish_online_score(score, name, game_over):
 def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, user_type, online_user_type):
     print('='*31)
     print('='*10, 'Game Over', '='*10)
-    print('User Type:', user_type)
+    print('User Type (Offline):', user_type)
+    print('User Type (Online):', online_user_type)
     print('Coin:', coin_count)
     print('Score:', score)
     print('High Score:', high_score)
@@ -639,7 +641,7 @@ def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, us
 # Initialize Global CONSTANTS from space_wars_settings.py (sws)
 MUSIC = False  # sws.MUSIC 		# True
 GAME_SPEED = 5  # sws.GAME_SPEED 	# 1 to 5
-PLAYER_NAME = 'Ohm'  # sws.PLAYER_NAME	# 'DAN'
+PLAYER_NAME = username  # sws.PLAYER_NAME	# 'DAN'
 
 
 # Initialize Global variables
@@ -755,7 +757,7 @@ def save_collection_data(level, keyX_pressed_count, keyY_pressed_count, respawn_
         a9 = respawn_enemy_count
         a10 = respawn_coin_count
         if sum([a0, a1, a2, a3, a4, a5]) != 0:
-            with open("train_data.txt", "a") as file_object:
+            with open("train_data_"+username+".txt", "a") as file_object:
                 file_object.write(
                     ",".join(map(str, [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10])))
                 file_object.write("\n")
@@ -765,17 +767,23 @@ def save_collection_data(level, keyX_pressed_count, keyY_pressed_count, respawn_
             # game_cumulative
             game_avg = game_avg.append(data, ignore_index=True)
             # publish
+            data = dict(user=username, feature=data)
             microgear.publish(user_data_topic, json.dumps(data))
         publish_time_data = now
 
 
 def save_collection_avg_data(data):
+    global microgear
     if data['A0'] > 0:
-        with open("test_data.txt", "a") as file_object:
+        with open("test_data_"+username+".txt", "a") as file_object:
             file_object.write(
                 ",".join(map(str, [data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'], data['A6'], data['A7'], data['A8'], data['A9'], data['A10']
                                    ])))
             file_object.write("\n")
+        data = dict(A0=data['A0'], A1=data['A1'], A2=data['A2'], A3=data['A3'], A4=data['A4'],
+                    A5=data['A5'], A6=data['A6'], A7=data['A7'], A8=data['A8'], A9=data['A9'], A10=data['A10'])
+        data = dict(user=username, feature=data)
+        microgear.publish(user_data_topic, json.dumps(data))
 
 
 # --------------------
