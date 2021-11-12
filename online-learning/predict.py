@@ -18,6 +18,14 @@ user = None
 feature = None
 y_pred = None
 
+scaler = preprocessing.StandardScaler()
+
+with open('./model.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+type_label = {0: 'Casual Achiever', 1: 'Casual Killer', 2: 'Hardcore Killer', 3: 'Hardcore Achiever' }
+
+
 def callback_connect():
     logging.info("Now I am connected with netpie")
 
@@ -37,10 +45,16 @@ def callback_message(topic, message):
             user = res['user']
             feature = res['feature']
 
+            x = scaler.learn_one(feature).transform_one(feature)
+            y_pred = model.predict_one(x)
+            player_type = type_label[y_pred]
+            data = dict(user=user, type=player_type)
+            microgear.publish(user_pred_topic, json.dumps(data))
+
     except Exception:
         pass
 
-    # logging.info(f'Topic: {topic} | User: {user} | Feature: {feature}')
+    logging.info(f'Topic: {topic} | User: {user} | Feature: {feature}')
 
 def callback_error(msg):
     print("error", msg)
@@ -52,25 +66,19 @@ microgear.on_message = callback_message
 microgear.on_error = callback_error
 microgear.on_disconnect = disconnect
 microgear.subscribe(user_data_topic)
-microgear.connect(False)
+microgear.connect(True)
 
-scaler = preprocessing.StandardScaler()
 
-with open('./model.pkl', 'rb') as f:
-    model = pickle.load(f)
-
-type_label = {0: 'Casual Achiever', 1: 'Casual Killer', 2: 'Hardcore Killer', 3: 'Hardcore Achiever' }
-
-while True:
-    if feature is not None:
-
-        x = scaler.learn_one(feature).transform_one(feature)
-        model = model.learn_one(x)
-        y_pred = model.predict_one(x)
-
-        player_type = type_label[y_pred]
-
-        logging.info(f'Cluster {y_pred} | Type {player_type}')
-
-        data = {'user': user, 'type:': player_type}
-        microgear.publish(user_pred_topic, str(data))
+# while True:
+#     if feature is not None:
+#
+#         x = scaler.learn_one(feature).transform_one(feature)
+#         model = model.learn_one(x)
+#         y_pred = model.predict_one(x)
+#
+#         player_type = type_label[y_pred]
+#
+#         # logging.info(f'User: {user} | Cluster: {y_pred} | Type: {player_type}')
+#
+#         data = {'user': user, 'type:': player_type}
+#         microgear.publish(user_pred_topic, str(data))

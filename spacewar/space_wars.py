@@ -50,7 +50,7 @@ online_user_type = None
 publish_time = datetime.now()
 publish_time_data = datetime.now()
 
-username = 'Fang'
+username = 'Ohm'
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
@@ -77,11 +77,13 @@ def subscription(topic, message):
         elif topic == f"/{appid}{user_pred_topic}" and message:
             msg_pred = json.loads(ast.literal_eval(message).decode('utf-8'))
             if msg_pred['user'] == username:
-                online_user_type = msg_pred['user_type']
-                print(msg_pred)
+                online_user_type = msg_pred['type']
+
     except Exception:
         pass
-    logging.info(topic + " " + message)
+
+    logging.info(username + " " + online_user_type)
+    # logging.info(topic + " " + message)
 
 
 def disconnect():
