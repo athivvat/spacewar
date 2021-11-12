@@ -3,16 +3,14 @@ import logging
 import pickle
 import microgear.client as microgear
 
-from river import cluster
 from river import preprocessing
-from river import stream
-from river import metrics
 
 # NETPIE Environment
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
-user_score_topic = '/401Chathai_data'
+user_data_topic = '/401Chathai_data'
+user_pred_topic = '/401Chathai_pred'
 
 microgear.create(gearkey, gearsecret, appid, {'debugmode': True})
 
@@ -34,7 +32,7 @@ def callback_message(topic, message):
     global feature
 
     try:
-        if topic == f"/{appid}{user_score_topic}" and message:
+        if topic == f"/{appid}{user_data_topic}" and message:
             res = json.loads(ast.literal_eval(message).decode('utf-8'))
             user = res['user']
             feature = res['feature']
@@ -53,11 +51,9 @@ microgear.on_connect = callback_connect
 microgear.on_message = callback_message
 microgear.on_error = callback_error
 microgear.on_disconnect = disconnect
-microgear.subscribe(user_score_topic)
+microgear.subscribe(user_data_topic)
 microgear.connect(False)
 
-k_means = cluster.KMeans(n_clusters=4, halflife=0.4, sigma=3, seed=0)
-metric = metrics.cluster.Silhouette()
 scaler = preprocessing.StandardScaler()
 
 with open('./model.pkl', 'rb') as f:
@@ -72,8 +68,9 @@ while True:
         model = model.learn_one(x)
         y_pred = model.predict_one(x)
 
-        logging.info(f'Assigned to cluster {y_pred}')
+        player_type = type_label[y_pred]
 
-        data = {'user': user, 'type:': type_label[y_pred]}
+        logging.info(f'Cluster {y_pred} | Type {player_type}')
 
-        microgear.chat("/401Chathai_pred", data)
+        data = {'user': user, 'type:': player_type}
+        microgear.publish(user_pred_topic, str(data))
