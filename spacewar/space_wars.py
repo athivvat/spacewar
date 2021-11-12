@@ -595,7 +595,7 @@ def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, us
 # Initialize Global CONSTANTS from space_wars_settings.py (sws)
 MUSIC = False  # sws.MUSIC 		# True
 GAME_SPEED = 5  # sws.GAME_SPEED 	# 1 to 5
-PLAYER_NAME = 'Fang'  # sws.PLAYER_NAME	# 'DAN'
+PLAYER_NAME = 'Ohm'  # sws.PLAYER_NAME	# 'DAN'
 
 
 # Initialize Global variables
@@ -704,7 +704,7 @@ def save_collection_data(level, keyX_pressed_count, keyY_pressed_count, respawn_
         a2 = coin_count
         a3 = destroyed_enemy_count
         a4 = shots_count
-        a5 = A4 - A3
+        a5 = a4 - a3
         a6 = level
         a7 = keyX_pressed_count
         a8 = keyY_pressed_count
