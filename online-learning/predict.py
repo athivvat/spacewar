@@ -12,10 +12,11 @@ from river import metrics
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
-user_score_topic = '/401Chathai_pred'
+user_score_topic = '/401Chathai_data'
 
 microgear.create(gearkey, gearsecret, appid, {'debugmode': True})
 
+user = None
 feature = None
 y_pred = None
 
@@ -29,13 +30,19 @@ def disconnect():
 
 def callback_message(topic, message):
     import ast
+    global user
     global feature
 
     try:
         if topic == f"/{appid}{user_score_topic}" and message:
-            feature = json.loads(ast.literal_eval(message).decode('utf-8'))
+            res = json.loads(ast.literal_eval(message).decode('utf-8'))
+            user = res['user']
+            feature = res['feature']
+
     except Exception:
         pass
+
+    # logging.info(f'Topic: {topic} | User: {user} | Feature: {feature}')
 
 def callback_error(msg):
     print("error", msg)
@@ -56,14 +63,17 @@ scaler = preprocessing.StandardScaler()
 with open('./model.pkl', 'rb') as f:
     model = pickle.load(f)
 
+type_label = {0: 'Casual Achiever', 1: 'Casual Killer', 2: 'Hardcore Killer', 3: 'Hardcore Achiever' }
+
 while True:
     if feature is not None:
+
         x = scaler.learn_one(feature).transform_one(feature)
         model = model.learn_one(x)
         y_pred = model.predict_one(x)
 
-        print(f'Assigned to cluster {y_pred}')
+        logging.info(f'Assigned to cluster {y_pred}')
 
-        data = {'user_type:': y_pred}
+        data = {'user': user, 'type:': type_label[y_pred]}
 
         microgear.chat("/401Chathai_pred", data)
