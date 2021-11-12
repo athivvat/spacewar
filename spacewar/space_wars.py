@@ -92,7 +92,7 @@ LABELS = {2: 'Hardcore Achiever', 3: 'Hardcore Killer',
           1: 'Casual Achiever', 0: 'Casual Killer'}
 
 
-def prediction_user_type(level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count):
+def prediction_user_type(level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, is_game_over=False):
     global A0, A1
     a0 = statistics.mean(A0) if len(A0) else 0
     a1 = statistics.mean(A1) if len(A1) else 0
@@ -107,8 +107,12 @@ def prediction_user_type(level, keyX_pressed_count, keyY_pressed_count, respawn_
     a10 = respawn_coin_count
     # a11 = a3/a9
     # a12 = a2/a10
-    X = [[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10]]
 
+    X = [[a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10]]
+    if is_game_over:
+        data = game_avg.mean().to_dict()
+        X = [[data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'],
+              data['A6'], data['A7'], data['A8'], data['A9'], data['A10']]]
     X_scale = dt_scaler.transform(X)
     y = decision_tree.predict(X_scale)[0]
     return LABELS.get(y)
@@ -545,7 +549,13 @@ def publish_online_score(score, name, game_over):
 
 
 def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, user_type):
-
+    print('='*31)
+    print('='*10, 'Game Over', '='*10)
+    print('User Type:', user_type)
+    print('Coin:', coin_count)
+    print('Score:', score)
+    print('High Score:', high_score)
+    print('='*31)
     # Move enemies below screen (is there a better way?)
     for i in range(num_of_enemies):
         enemy[i].posY = screen_sizeY + 100
@@ -565,7 +575,6 @@ def show_game_over(screen_sizeX, screen_sizeY, score, high_score, coin_count, us
                            yellow, int(screen_sizeX/2), int(screen_sizeY * 7/10))
     message_display_center('Press any key to continue', font_medium, yellow, int(
         screen_sizeX/2), int(screen_sizeY * 8/10))
-
 
 #############################
 #		Main Program		#
@@ -720,7 +729,7 @@ def save_collection_avg_data(data):
     if data['A0'] > 0:
         with open("test_data.txt", "a") as file_object:
             file_object.write(
-                ",".join(map(str, [data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'], data['A6'], data['A6'], data['A7'], data['A8'], data['A9'], data['A10']
+                ",".join(map(str, [data['A0'], data['A1'], data['A2'], data['A3'], data['A4'], data['A5'], data['A6'], data['A7'], data['A8'], data['A9'], data['A10']
                                    ])))
             file_object.write("\n")
 
@@ -910,7 +919,7 @@ while not quit_game:
             player.explosion_counter = 0
             thread.cancel()
             user_type = prediction_user_type(
-                level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count)
+                level, keyX_pressed_count, keyY_pressed_count, respawn_enemy_count, respawn_coin_count, True)
             show_game_over(screen_sizeX, screen_sizeY, score,
                            session_high_score, coin_count, user_type)
             show_score(score, level, PLAYER_NAME, coin_count, game_over=True)
