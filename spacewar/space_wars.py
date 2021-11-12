@@ -50,7 +50,7 @@ online_user_type = None
 publish_time = datetime.now()
 publish_time_data = datetime.now()
 
-username = 'Ohm'
+username = 'Fang'
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
@@ -79,9 +79,7 @@ def subscription(topic, message):
                 online_user_type = msg_pred['type']
     except Exception:
         pass
-
-    logging.info(username + " " + online_user_type)
-    # logging.info(topic + " " + message)
+    logging.info(topic + " " + message)
 
 
 def disconnect():
