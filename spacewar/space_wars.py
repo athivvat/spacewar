@@ -77,10 +77,6 @@ def subscription(topic, message):
             msg_pred = json.loads(ast.literal_eval(message).decode('utf-8'))
             if msg_pred['user'] == username:
                 online_user_type = msg_pred['type']
-<<<<<<< HEAD
-=======
-
->>>>>>> 49890d1fa5aae1757ecdc4b0bc09af2174f67da5
     except Exception:
         pass
 
