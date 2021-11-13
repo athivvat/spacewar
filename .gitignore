@@ -10,3 +10,6 @@ test_data_*
 
 # Environment
 .env
+
+# System Files
+.DS_Store
