@@ -1,0 +1,12 @@
+# Microgear
+microgear-*
+
+# Train & Test data
+train_data_*
+test_data_*
+
+# Idea
+.idea
+
+# Environment
+.env

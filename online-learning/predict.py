@@ -4,6 +4,7 @@ import pickle
 import microgear.client as microgear
 
 from river import preprocessing
+from river import metrics
 
 # NETPIE Environment
 appid = 'datastream'
@@ -17,8 +18,11 @@ microgear.create(gearkey, gearsecret, appid, {'debugmode': True})
 user = None
 feature = None
 y_pred = None
+model = None
+metric = None
 
 scaler = preprocessing.StandardScaler()
+metric = metrics.cluster.Cohesion()
 
 with open('./model.pkl', 'rb') as f:
     model = pickle.load(f)
@@ -38,6 +42,8 @@ def callback_message(topic, message):
     import ast
     global user
     global feature
+    global model
+    global metric
 
     try:
         if topic == f"/{appid}{user_data_topic}" and message:
@@ -46,15 +52,19 @@ def callback_message(topic, message):
             feature = res['feature']
 
             x = scaler.learn_one(feature).transform_one(feature)
+            model = model.learn_one(x)
             y_pred = model.predict_one(x)
+            metric = metric.update(x, y_pred, model.centers)
+
             player_type = type_label[y_pred]
             data = dict(user=user, type=player_type)
             microgear.publish(user_pred_topic, json.dumps(data))
 
+            logging.info(f'User: {user} | Predict: {y_pred} | Type: {player_type} | Metric: {metric}')
+
     except Exception:
         pass
 
-    logging.info(f'Topic: {topic} | User: {user} | Feature: {feature}')
 
 def callback_error(msg):
     print("error", msg)
@@ -67,18 +77,3 @@ microgear.on_error = callback_error
 microgear.on_disconnect = disconnect
 microgear.subscribe(user_data_topic)
 microgear.connect(True)
-
-
-# while True:
-#     if feature is not None:
-#
-#         x = scaler.learn_one(feature).transform_one(feature)
-#         model = model.learn_one(x)
-#         y_pred = model.predict_one(x)
-#
-#         player_type = type_label[y_pred]
-#
-#         # logging.info(f'User: {user} | Cluster: {y_pred} | Type: {player_type}')
-#
-#         data = {'user': user, 'type:': player_type}
-#         microgear.publish(user_pred_topic, str(data))

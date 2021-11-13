@@ -50,7 +50,7 @@ online_user_type = None
 publish_time = datetime.now()
 publish_time_data = datetime.now()
 
-username = 'Fang'
+username = 'Ohm'
 appid = 'datastream'
 gearkey = 'qY0dhxc3TAswzeC'
 gearsecret = 'eNInuhdaicInPOJl0KfPrBJfS'
